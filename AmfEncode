@@ -1,0 +1,257 @@
+using mtanksl.ActionMessageFormat;
+using Newtonsoft.Json;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+
+namespace ActionMessageFormat.New
+{
+    class AmfEncode
+    {
+
+        public List<object> Content_Number(int Number)
+        {
+            List<object> obj = new List<object>();
+            obj.Add(Number);
+            return (obj);
+        }
+ 
+        public List<object> Content_NumberArray(List<int> Number)
+        {
+            List<object> obj = new List<object>();
+
+            for (int i = 0; i < Number.Count; i++)
+            {
+                obj.Add(Number[i]);
+            }
+
+            
+            return (obj);
+
+        }
+
+        public List<object> Content_String(string String)
+        {
+            List<object> obj = new List<object>();
+            obj.Add(String);
+            return (obj);
+        }
+
+        public List<object> Content_StringArray(List< string> String)
+        {
+            List<object> obj = new List<object>();
+            for (int i = 0; i < String.Count; i++)
+            {
+                obj.Add(String[i]);
+            }
+           
+            return (obj);
+        }
+
+        public List<object> Content_Date(DateTime Date)
+        {
+            List<object> obj = new List<object>();
+            obj.Add(Date);
+            return (obj);
+        }
+
+        public List<object> Content_DateArray(List< DateTime> Date)
+        {
+            List<object> obj = new List<object>();
+            for (int i = 0; i < Date.Count; i++)
+            {
+                obj.Add(Date[i]);
+            }
+           
+            return (obj);
+        }
+
+        public List<object> Content_Bool(Boolean Boole)
+        {
+            List<object> obj = new List<object>();
+            obj.Add(Boole);
+            return (obj);
+        }
+
+        public List<object> Content_BoolArray( List<Boolean> Boole)
+        {
+            List<object> obj = new List<object>();
+            for (int i = 0; i < Boole.Count; i++)
+            {
+                obj.Add(Boole[i]);
+            }
+           
+            return (obj);
+        }
+
+        public List<object> Content_Null( )
+        {
+            List<object> obj = new List<object>();
+            obj.Add(null);
+            return (obj);
+        }
+
+        public List<object> Content_Undefinedy()
+        {
+            List<object> obj = new List<object>();
+            obj.Add(null);
+            return (obj);
+        }
+
+        public List<object> Content_Object(List<object> Object)
+        {
+            List<object> obj = new List<object>();
+            obj.Add(Object);
+            return (obj);
+
+
+
+
+        }
+
+        /// <summary>
+        /// 构造AMF信息体
+        /// </summary>
+        /// <param name="TargetUri">响应</param>
+        /// <param name="ResponseUri">路径</param>
+        /// <param name="Content">信息</param>
+        /// <returns></returns>
+        public AmfMessage Construct_Message(string TargetUri, string ResponseUri, List<object> Content)
+        {
+            AmfMessage message = new AmfMessage();
+            Amf3Array array = new Amf3Array();
+
+            array.StrictDense = Content;
+            message.TargetUri = TargetUri;
+            message.ResponseUri = ResponseUri;
+
+
+
+            message.Data = array.StrictDense;
+
+            return (message);
+
+        }
+
+
+        /// <summary>
+        /// 构造AMF信息头
+        /// </summary>
+        /// <param name="Name">名称</param>
+        /// <param name="MustUnderstand">必须了解</param>
+        /// <param name="Content">信息</param>
+        /// <returns></returns>
+        public AmfHeader Construct_Header(string Name, bool MustUnderstand, List<object> Content)
+        {
+            AmfHeader Header = new AmfHeader();
+            Header.Name = Name;
+            Header.MustUnderstand = MustUnderstand;
+            Header.Data = Content;
+
+            return (Header);
+
+        }
+
+
+        /// <summary>
+        ///  构造AMF封装信息体 需要手动构造List<>
+        /// </summary>
+        /// <param name="version">AMF版本号</param>
+        /// <param name="headers">AMF信息头</param>
+        /// <param name="messages">AMF信息体</param>
+        /// <returns></returns>
+        public AmfPacket PackageInof(AmfVersion version, List<AmfHeader> headers, List<AmfMessage> messages)
+        {
+            AmfPacket packet = new AmfPacket();
+
+            packet.Version = version;
+            packet.Headers = headers;
+            packet.Messages = messages;
+
+            return (packet);
+        }
+         
+        
+        /// <summary>
+        /// 将AMF信息编码成字节数组
+        /// </summary>
+        /// <param name="PackageInof">AMF封装信息体</param>
+        /// <returns></returns>
+        public byte[] Encoder(AmfPacket PackageInof)
+        {
+            AmfWriter writer = new AmfWriter();
+            writer.WriteAmfPacket(PackageInof);
+            return (writer.Data);
+
+
+        }
+
+        /// <summary>
+        /// 将AMF Message消息Content转换成Json数据
+        /// </summary>
+        /// <param name="bytes">AMF字节数组</param>
+        /// <returns></returns>
+        public string Decoder(byte[] bytes)
+        {
+            AmfReader reader = new AmfReader(bytes);
+
+            var data = reader.ReadAmfPacket().Messages[0].Data;
+            var mainJson = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+            var dectionarydata = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(mainJson);
+
+            dectionarydata.TryGetValue("DynamicMembersAndValues", out object DynamicMembersAndValues);
+
+            var tx = Newtonsoft.Json.JsonConvert.SerializeObject(DynamicMembersAndValues);
+            var result = tx.Replace("{\"ClassName\":\"\",\"IsAnonymous\":true,\"DynamicMembersAndValues\":", "").Replace("}}", "}").Replace("}}],", "}],");
+
+            return (result);
+
+
+        }
+        /// <summary>
+        /// 与上述同理，Json格式由豆包转译
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        public string Decoder_Doubao(byte[] bytes)
+        {
+            try
+            {
+                // 创建 AmfReader 实例并读取 AMF 数据包
+                AmfReader reader = new AmfReader(bytes);
+                var packet = reader.ReadAmfPacket();
+
+                // 获取数据包中第一个消息的数据
+                var data = packet.Messages[0].Data;
+
+                // 将数据序列化为 JSON 字符串
+                var mainJson = JsonConvert.SerializeObject(data);
+
+                // 将 JSON 字符串反序列化为字典
+                var dictionaryData = JsonConvert.DeserializeObject<Dictionary<string, object>>(mainJson);
+
+                // 尝试从字典中获取 DynamicMembersAndValues 键对应的值
+                if (dictionaryData.TryGetValue("DynamicMembersAndValues", out object dynamicMembersAndValues))
+                {
+                    // 将 DynamicMembersAndValues 序列化为 JSON 字符串
+                    var resultJson = JsonConvert.SerializeObject(dynamicMembersAndValues);
+                    return resultJson;
+                }
+                else
+                {
+                    // 如果未找到 DynamicMembersAndValues 键，返回空字符串
+                    return string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 处理可能出现的异常，例如 AmfReader 读取失败、JSON 序列化或反序列化失败等
+                Console.WriteLine($"解码过程中出现错误: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+
+    }
+}
